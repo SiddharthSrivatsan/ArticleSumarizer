@@ -18,6 +18,8 @@ package org.cyberneko.html;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+
 import org.apache.xerces.util.XMLAttributesImpl;
 import org.apache.xerces.xni.Augmentations;
 import org.apache.xerces.xni.NamespaceContext;
@@ -190,6 +192,12 @@ public class HTMLTagBalancer
     /** Ignore outside content. */
     protected boolean fIgnoreOutsideContent;
 
+    /** Allows self closing iframe tags. */
+    protected boolean fAllowSelfclosingIframe;
+
+    /** Allows self closing tags. */
+    protected boolean fAllowSelfclosingTags;
+
     // properties
 
     /** Modify HTML element names. */
@@ -240,6 +248,10 @@ public class HTMLTagBalancer
 
     /** True if seen &lt;body&lt; element. */
     protected boolean fSeenBodyElement;
+    private boolean fSeenBodyElementEnd;
+
+    /** True if seen &lt;frameset&lt; element. */
+    private boolean fSeenFramesetElement;
 
     /** True if a form is in the stack (allow to discard opening of nested forms) */
     protected boolean fOpenedForm;
@@ -310,7 +322,7 @@ public class HTMLTagBalancer
     } // getRecognizedProperties():String[]
 
     /** Resets the component. */
-    public void reset(XMLComponentManager manager)
+    public void reset(final XMLComponentManager manager)
         throws XMLConfigurationException {
 
         // get features
@@ -320,6 +332,8 @@ public class HTMLTagBalancer
         fDocumentFragment = manager.getFeature(DOCUMENT_FRAGMENT) ||
                             manager.getFeature(DOCUMENT_FRAGMENT_DEPRECATED);
         fIgnoreOutsideContent = manager.getFeature(IGNORE_OUTSIDE_CONTENT);
+        fAllowSelfclosingIframe = manager.getFeature(HTMLScanner.ALLOW_SELFCLOSING_IFRAME);
+        fAllowSelfclosingTags = manager.getFeature(HTMLScanner.ALLOW_SELFCLOSING_TAGS);
 
         // get properties
         fNamesElems = getNamesValue(String.valueOf(manager.getProperty(NAMES_ELEMS)));
@@ -327,6 +341,14 @@ public class HTMLTagBalancer
         fErrorReporter = (HTMLErrorReporter)manager.getProperty(ERROR_REPORTER);
         
         fragmentContextStack_ = (QName[]) manager.getProperty(FRAGMENT_CONTEXT_STACK);
+        fSeenAnything = false;
+        fSeenDoctype = false;
+        fSeenRootElement = false;
+        fSeenRootElementEnd = false;
+        fSeenHeadElement = false;
+        fSeenBodyElement = false;
+        fSeenBodyElementEnd = false;
+        fSeenFramesetElement = false;
 
     } // reset(XMLComponentManager)
 
@@ -406,13 +428,6 @@ public class HTMLTagBalancer
         else {
         	fragmentContextStackSize_ = 0;
         }
-        fSeenAnything = false;
-        fSeenDoctype = false;
-        fSeenRootElement = false;
-        fSeenRootElementEnd = false;
-        fSeenHeadElement = false;
-        fSeenBodyElement = false;
-        
 
         // pass on event
         if (fDocumentHandler != null) {
@@ -569,7 +584,13 @@ public class HTMLTagBalancer
         	notifyDiscardedStartElement(elem, attrs, augs);
             return;
         }
-        if (elementCode == HTMLElements.HEAD) {
+		// accept only frame and frameset within frameset
+		if (fSeenFramesetElement && elementCode != HTMLElements.FRAME && elementCode != HTMLElements.FRAMESET && elementCode != HTMLElements.NOFRAMES) {
+        	notifyDiscardedStartElement(elem, attrs, augs);
+            return;
+		}
+
+		if (elementCode == HTMLElements.HEAD) {
             if (fSeenHeadElement) {
             	notifyDiscardedStartElement(elem, attrs, augs);
                 return;
@@ -577,7 +598,14 @@ public class HTMLTagBalancer
             fSeenHeadElement = true;
         }
         else if (elementCode == HTMLElements.FRAMESET) {
+    		// create <head></head> if none was present
+    		if (!fSeenHeadElement) {
+    			final QName head = createQName("head");
+    			forceStartElement(head, null, synthesizedAugs());
+    			endElement(head, synthesizedAugs());
+    		}
         	consumeBufferedEndElements(); // </head> (if any) has been buffered
+            fSeenFramesetElement = true;
         }
         else if (elementCode == HTMLElements.BODY) {
     		// create <head></head> if none was present
@@ -607,8 +635,12 @@ public class HTMLTagBalancer
 
         // check proper parent
         if (element.parent != null) {
-        	if (!fSeenRootElement && !fDocumentFragment) {
-                String pname = element.parent[0].name;
+            final HTMLElements.Element preferedParent = element.parent[0];
+        	if (fDocumentFragment && (preferedParent.code == HTMLElements.HEAD || preferedParent.code == HTMLElements.BODY)) {
+        		// nothing, don't force HEAD or BODY creation for a document fragment
+        	}
+        	else if (!fSeenRootElement && !fDocumentFragment) {
+                String pname = preferedParent.name;
                 pname = modifyName(pname, fNamesElems);
                 if (fReportErrors) {
                     String ename = elem.rawname;
@@ -624,7 +656,6 @@ public class HTMLTagBalancer
                 }
             }
         	else {
-                HTMLElements.Element preferedParent = element.parent[0];
                 if (preferedParent.code != HTMLElements.HEAD || (!fSeenBodyElement && !fDocumentFragment)) {
                     int depth = getParentDepth(element.parent, element.bounds);
                     if (depth == -1) { // no parent found
@@ -697,22 +728,9 @@ public class HTMLTagBalancer
                 }
                 
                 // should we stop searching?
-                if(element.nestable) {
-                    if (info.element.isBlock() || element.isParent(info.element)) {
-                    	break;
-                    }
+                if (info.element.isBlock() || element.isParent(info.element)) {
+                	break;
                 }
-            }
-        }
-        // TODO: investigate if only table is special here
-        // table closes all opened inline elements
-        else if (elementCode == HTMLElements.TABLE) {
-            for (int i=fElementStack.top-1; i >= 0; i--) {
-                final Info info = fElementStack.data[i];
-                if (!info.element.isInline()) {
-                    break;
-                }
-                endElement(info.qname, synthesizedAugs());
             }
         }
 
@@ -773,7 +791,10 @@ public class HTMLTagBalancer
     	startElement(element, attrs, augs);
         // browser ignore the closing indication for non empty tags like <form .../> but not for unknown element
         final HTMLElements.Element elem = getElement(element);
-        if (elem.isEmpty() || elem.code == HTMLElements.UNKNOWN) {
+        if (elem.isEmpty()
+        		|| fAllowSelfclosingTags
+        		|| elem.code == HTMLElements.UNKNOWN
+        		|| (elem.code == HTMLElements.IFRAME && fAllowSelfclosingIframe)) {
         	endElement(element, augs);
         }
     } // emptyElement(QName,XMLAttributes,Augmentations)
@@ -898,7 +919,7 @@ public class HTMLTagBalancer
     /** Characters. */
     public void characters(final XMLString text, final Augmentations augs) throws XNIException {
         // check for end of document
-        if (fSeenRootElementEnd) {
+        if (fSeenRootElementEnd || fSeenBodyElementEnd) {
             return;
         }
 
@@ -981,9 +1002,24 @@ public class HTMLTagBalancer
             return;
         }
 
-        // check for end of document
+		// accept only frame and frameset within frameset
+		if (fSeenFramesetElement && elem.code != HTMLElements.FRAME && elem.code != HTMLElements.FRAMESET) {
+        	notifyDiscardedEndElement(element, augs);
+            return;
+		}
+
+		// check for end of document
         if (elem.code == HTMLElements.HTML) {
             fSeenRootElementEnd = true;
+        }
+        else if (fIgnoreOutsideContent) {
+        	if (elem.code == HTMLElements.BODY) {
+        		fSeenBodyElementEnd = true;
+        	}
+        	else if (fSeenBodyElementEnd) {
+            	notifyDiscardedEndElement(element, augs);
+                return;
+        	}
         }
         else if (elem.code == HTMLElements.FORM) {
         	fOpenedForm = false;
@@ -994,7 +1030,6 @@ public class HTMLTagBalancer
         	return;
         }
         
-
         // empty element
         int depth = getElementDepth(elem);
         if (depth == -1) {
@@ -1015,7 +1050,6 @@ public class HTMLTagBalancer
             for (int i = 0; i < depth - 1; i++) {
                 final Info info = fElementStack.data[size - i - 1];
                 final HTMLElements.Element pelem = info.element;
-                
                 if (pelem.isInline() || pelem.code == HTMLElements.FONT) { // TODO: investigate if only FONT
                     // NOTE: I don't have to make a copy of the info because
                     //       it will just be popped off of the element stack
@@ -1028,14 +1062,13 @@ public class HTMLTagBalancer
         // close children up to appropriate element
         for (int i = 0; i < depth; i++) {
             Info info = fElementStack.pop();
-            
             if (fReportErrors && i < depth - 1) {
                 String ename = modifyName(element.rawname, fNamesElems);
                 String iname = info.qname.rawname;
                 fErrorReporter.reportWarning("HTML2007", new Object[]{ename,iname});
             }
             if (fDocumentHandler != null) {
-                // PATCH: Marc-Andr\u00e8 Morissette
+                // PATCH: Marc-Andr� Morissette
                 callEndElement(info.qname, i < depth - 1 ? synthesizedAugs() : augs);
             }
         }
@@ -1044,7 +1077,7 @@ public class HTMLTagBalancer
         if (depth > 1) {
             int size = fInlineStack.top;
             for (int i = 0; i < size; i++) {
-                Info info = (Info)fInlineStack.pop();
+                final Info info = fInlineStack.pop();
                 XMLAttributes attributes = info.attributes;
                 if (fReportErrors) {
                     String iname = info.qname.rawname;
@@ -1145,15 +1178,25 @@ public class HTMLTagBalancer
      */
     protected final int getElementDepth(HTMLElements.Element element) {
         final boolean container = element.isContainer();
+        final short elementCode = element.code;
+        final boolean tableBodyOrHtml = (elementCode == HTMLElements.TABLE)
+			|| (elementCode == HTMLElements.BODY) || (elementCode == HTMLElements.HTML);
         int depth = -1;
         for (int i = fElementStack.top - 1; i >=fragmentContextStackSize_; i--) {
             Info info = fElementStack.data[i];
-            if (info.element.code == element.code) {
+            if (info.element.code == element.code
+            		&& (elementCode != HTMLElements.UNKNOWN || (elementCode == HTMLElements.UNKNOWN && element.name.equals(info.element.name)))) {
                 depth = fElementStack.top - i;
                 break;
             }
-            if (!container && (element.nestable && info.element.isBlock())) {
+            if (!container && info.element.isBlock()) {
                 break;
+            }
+            if (info.element.code == HTMLElements.TABLE && !tableBodyOrHtml) {
+            	return -1; // current element not allowed to close a table
+            }
+            if (element.isParent(info.element)) {
+            	break;
             }
         }
         return depth;
@@ -1206,8 +1249,8 @@ public class HTMLTagBalancer
     /** Modifies the given name based on the specified mode. */
     protected static final String modifyName(String name, short mode) {
         switch (mode) {
-            case NAMES_UPPERCASE: return name.toUpperCase();
-            case NAMES_LOWERCASE: return name.toLowerCase();
+            case NAMES_UPPERCASE: return name.toUpperCase(Locale.ENGLISH);
+            case NAMES_LOWERCASE: return name.toLowerCase(Locale.ENGLISH);
         }
         return name;
     } // modifyName(String,short):String
