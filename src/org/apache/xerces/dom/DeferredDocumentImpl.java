@@ -1009,13 +1009,6 @@ public class DeferredDocumentImpl
                     System.out.println("getNodeObject(ELEMENT_NODE): "+nodeIndex);
                 }
 
-                // create node
-                if (fNamespacesEnabled) {
-                    node = new DeferredElementNSImpl(this, nodeIndex);
-                } else {
-                    node = new DeferredElementImpl(this, nodeIndex);
-                }
-
                 // check to see if this element needs to be
                 // registered for its ID attributes
                 if (fIdElement != null) {
