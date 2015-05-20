@@ -13,14 +13,7 @@ public class SummarizingTool {
 	public static void main(String[] args)
 	{
 		RSSFeed.getURL();
-		try
-		{
-		    RSSFeed.extractArticle();
-		}
-		catch(Exception e)
-		{
-			e.printStackTrace();
-		}
+		RSSFeed.extractArticle();
 		RSSFeed.writeArticle();
 		
 		article = "";
@@ -42,12 +35,12 @@ public class SummarizingTool {
 		}
 		
 	
-		sentences = article.split(". ");
-	
-//		for(String x : sentences)
-//		{
-//			System.out.println(x);
-//		}
+		sentences = article.split("[.]");
+		
+		for(String x : sentences)
+		{
+			System.out.println(x);
+		}
 
 	}
 	

@@ -2,13 +2,14 @@ import java.io.*;
 import java.util.*;
 import de.vogella.rss.read.*;
 import de.vogella.rss.model.*;
-import de.vogella.rss.write.*;
-import de.l3s.boilerpipe.extractors.ArticleExtractor;
+import de.l3s.boilerpipe.extractors.*;
+import java.net.URL;
 
 public class RSSFeed {
 	
 	private static String article;
-	private static String URL;
+	private static String webAddress;
+    private static URL url;
 	
 	public static void getURL()
 	{
@@ -18,15 +19,24 @@ public class RSSFeed {
 		String rss = input.next();
 		RSSFeedParser parser = new RSSFeedParser(rss);
 		Feed feed = parser.readFeed();
-		URL = feed.getMessages().get(0).getLink();
-		System.out.println(URL);
+		webAddress = feed.getMessages().get(0).getLink();
+		System.out.println(webAddress);
 		input.close();
 		
 	}
 	
-	public static void extractArticle() throws Exception
+	public static void extractArticle()
 	{
-		article = ArticleExtractor.INSTANCE.getText(URL);
+		try
+		{
+			url = new URL(webAddress);
+			article = ArticleExtractor.INSTANCE.getText(url);
+			System.out.println(article.length());
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
 	}
 	
 	public static void writeArticle()
