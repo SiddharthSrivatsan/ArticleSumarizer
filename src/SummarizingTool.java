@@ -35,7 +35,7 @@ public class SummarizingTool {
 		}
 		
 	
-		sentences = article.split("[.]");
+		sentences = article.split("(?<=[a-z])\\.\\s+");
 		
 		for(String x : sentences)
 		{
