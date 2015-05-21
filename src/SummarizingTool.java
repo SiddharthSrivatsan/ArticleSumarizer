@@ -7,6 +7,7 @@ public class SummarizingTool {
 	private static String[] sentences;
 	private static double[][] intersectScores;
 	private static double[] indivScores;
+	private static String[] paragraphs;
 	private static String summary;
 	
 	public static String getArticle() {
@@ -69,6 +70,24 @@ public class SummarizingTool {
 		return score;
 	}
 	
+	public static String buildSummary(double[] n, String[] s) {
+		String mySummary = s[0];
+		for(int i = 1; i < n.length; i+=4) {
+			int maxPos = i;
+			double max = n[i];
+			for(int k = i; k < n.length && k < i + 4; k++) {
+				if(n[k] > max) {
+					max = n[k];
+					maxPos = k;
+				}
+			}
+			mySummary += s[maxPos];
+			System.out.println(s[maxPos]);
+		}
+		
+		return mySummary;
+	}
+	
 	public static void main(String[] args) {
 		
 		//RSSFeed.getURL();
@@ -112,14 +131,18 @@ public class SummarizingTool {
 //				}
 //			}
 //		}
+		
+		for(double x : indivScores) {
+			System.out.println(x);
+		}
+		
+		summary = SummarizingTool.buildSummary(indivScores, sentences);
+		
+//		String[] s = SummarizingTool.splitSentences(summary);
 //		
-//		for(double x : indivScores) {
+//		for(String x : s) {
 //			System.out.println(x);
 //		}
 //		
-//		for(int i = 0; i <5; i++) {
-//			System.out.println(sentences[i]);
-//		}
-		
 	}
 }

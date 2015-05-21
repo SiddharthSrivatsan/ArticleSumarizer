@@ -26,7 +26,6 @@ public class RSSFeed {
 		try {
 			url = new URL(webAddress);
 			article = DefaultExtractor.INSTANCE.getText(url);
-			System.out.println(article.length());
 		}
 		catch(Exception e) {
 			e.printStackTrace();
