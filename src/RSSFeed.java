@@ -11,9 +11,7 @@ public class RSSFeed {
 	private static String webAddress;
     private static URL url;
 	
-	public static void getURL()
-	{
-		
+	public static void getURL() {
 		Scanner input = new Scanner(System.in);
 		System.out.print("Link to RSS Feed: ");
 		String rss = input.next();
@@ -21,40 +19,28 @@ public class RSSFeed {
 		Feed feed = parser.readFeed();
 		webAddress = feed.getMessages().get(0).getLink();
 		System.out.println(webAddress);
-		input.close();
-		
+		input.close();	
 	}
 	
-	public static void extractArticle()
-	{
-		try
-		{
+	public static void extractArticle() {
+		try {
 			url = new URL(webAddress);
-			article = ArticleExtractor.INSTANCE.getText(url);
+			article = DefaultExtractor.INSTANCE.getText(url);
 			System.out.println(article.length());
 		}
-		catch(Exception e)
-		{
+		catch(Exception e) {
 			e.printStackTrace();
 		}
 	}
 	
-	public static void writeArticle()
-	{
-		try
-		{
+	public static void writeArticle() {
+		try {
      	    FileWriter writer = new FileWriter("src/article.txt");
 		    writer.write(article);
 		    writer.close();
 		}
-		catch (FileNotFoundException e) 
-		{
+		catch (Exception e) {
 			e.printStackTrace();
 		}
-		catch (IOException e) 
-		{
-		    e.printStackTrace();
-		}
 	}
-
 }
