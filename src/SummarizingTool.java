@@ -30,11 +30,6 @@ public class SummarizingTool {
 	
 	public static String[] splitSentences(String s) {
 		String[] mySentences = s.split("\n|\\.(?!\\d)|(?<!\\d)\\.");
-		
-		for(String x : mySentences) {
-			System.out.println(x);
-		}
-		
 		return mySentences;
 	}
 	
@@ -75,14 +70,13 @@ public class SummarizingTool {
 		for(int i = 1; i < n.length; i+=4) {
 			int maxPos = i;
 			double max = n[i];
-			for(int k = i; k < n.length && k < i + 4; k++) {
+			for(int k = i; k < n.length && k < i + 5; k++) {
 				if(n[k] > max) {
 					max = n[k];
 					maxPos = k;
 				}
 			}
-			mySummary += s[maxPos];
-			System.out.println(s[maxPos]);
+			mySummary += s[maxPos] + ". ";
 		}
 		
 		return mySummary;
@@ -90,9 +84,9 @@ public class SummarizingTool {
 	
 	public static void main(String[] args) {
 		
-		//RSSFeed.getURL();
-		//RSSFeed.extractArticle();
-		//RSSFeed.writeArticle();
+		RSSFeed.getURL();
+		RSSFeed.extractArticle();
+		RSSFeed.writeArticle();
 
 		article = SummarizingTool.getArticle();
 	
@@ -117,32 +111,14 @@ public class SummarizingTool {
 			}
 			indivScores[i] = sum;
 		}
-//		
-//		for(int m = 0; m < indivScores.length - 1; m++) {
-//			for(int i = 0; i < indivScores.length - 1; i++) {
-//				int k = i + 1;
-//				if(indivScores[i] < indivScores[k]) {
-//					double temp = indivScores[k];
-//					indivScores[k] = indivScores[i];
-//					indivScores[i] = temp;
-//					String alsoTemp = sentences[k];
-//					sentences[k] = sentences[i];
-//					sentences[i] = alsoTemp;
-//				}
-//			}
-//		}
-		
-		for(double x : indivScores) {
-			System.out.println(x);
-		}
 		
 		summary = SummarizingTool.buildSummary(indivScores, sentences);
 		
-//		String[] s = SummarizingTool.splitSentences(summary);
-//		
-//		for(String x : s) {
-//			System.out.println(x);
-//		}
-//		
+		String[] s = SummarizingTool.splitSentences(summary);
+		
+		for(String x : s) {
+			System.out.println(x);
+		}
+		
 	}
 }
