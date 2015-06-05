@@ -18,7 +18,6 @@ public class RSSFeed {
 		RSSFeedParser parser = new RSSFeedParser(rss);
 		Feed feed = parser.readFeed();
 		webAddress = feed.getMessages().get(0).getLink();
-		System.out.println(webAddress);
 		input.close();	
 	}
 	

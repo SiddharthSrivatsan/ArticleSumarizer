@@ -1,5 +1,6 @@
 import java.util.*;
 import java.io.*;
+import java.text.*;
 
 public class SummarizingTool {
 
@@ -16,8 +17,8 @@ public class SummarizingTool {
 		File file = new File("src/article.txt");
 		try {
 			Scanner input = new Scanner(file);
-			while(input.hasNextLine()) {
-				newArticle += input.nextLine();
+			while(input.hasNext()) {
+				newArticle += input.next() + " ";
 			}
 			input.close();
 		}
@@ -29,10 +30,19 @@ public class SummarizingTool {
 	}
 	
 	public static String[] splitSentences(String s) {
-		String[] mySentences = s.split("\n|\\.(?!\\d)|(?<!\\d)\\.");
+		BreakIterator iterator = BreakIterator.getSentenceInstance(Locale.US);
+		ArrayList<String> sentenceS = new ArrayList<String>();
+		iterator.setText(s);
+		int start = iterator.first();
+		for (int end = iterator.next();
+		    end != BreakIterator.DONE;
+		    start = end, end = iterator.next()) {
+		  sentenceS.add(s.substring(start,end));
+		}
 		
-		for(String x : mySentences) {
-			System.out.println(x);
+		String[] mySentences = new String[sentenceS.size()];
+		for(int i = 0; i < mySentences.length; i++) {
+			mySentences[i] = sentenceS.get(i);
 		}
 		
 		return mySentences;
@@ -75,14 +85,13 @@ public class SummarizingTool {
 		for(int i = 1; i < n.length; i+=4) {
 			int maxPos = i;
 			double max = n[i];
-			for(int k = i; k < n.length && k < i + 4; k++) {
+			for(int k = i; k < n.length && k < i + 5; k++) {
 				if(n[k] > max) {
 					max = n[k];
 					maxPos = k;
 				}
 			}
 			mySummary += s[maxPos];
-			System.out.println(s[maxPos]);
 		}
 		
 		return mySummary;
@@ -117,32 +126,14 @@ public class SummarizingTool {
 			}
 			indivScores[i] = sum;
 		}
-//		
-//		for(int m = 0; m < indivScores.length - 1; m++) {
-//			for(int i = 0; i < indivScores.length - 1; i++) {
-//				int k = i + 1;
-//				if(indivScores[i] < indivScores[k]) {
-//					double temp = indivScores[k];
-//					indivScores[k] = indivScores[i];
-//					indivScores[i] = temp;
-//					String alsoTemp = sentences[k];
-//					sentences[k] = sentences[i];
-//					sentences[i] = alsoTemp;
-//				}
-//			}
-//		}
-		
-		for(double x : indivScores) {
-			System.out.println(x);
-		}
 		
 		summary = SummarizingTool.buildSummary(indivScores, sentences);
 		
-//		String[] s = SummarizingTool.splitSentences(summary);
-//		
-//		for(String x : s) {
-//			System.out.println(x);
-//		}
-//		
+		String[] s = SummarizingTool.splitSentences(summary);
+		
+		for(String x : s) {
+			System.out.println(x);
+		}
+		
 	}
 }
