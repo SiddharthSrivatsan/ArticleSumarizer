@@ -30,7 +30,6 @@ public class SummarizingTool {
 	}
 	
 	public static String[] splitSentences(String s) {
-<<<<<<< HEAD
 		BreakIterator iterator = BreakIterator.getSentenceInstance(Locale.US);
 		ArrayList<String> sentenceS = new ArrayList<String>();
 		iterator.setText(s);
@@ -46,9 +45,6 @@ public class SummarizingTool {
 			mySentences[i] = sentenceS.get(i);
 		}
 		
-=======
-		String[] mySentences = s.split("\n|\\.(?!\\d)|(?<!\\d)\\.");
->>>>>>> origin/master
 		return mySentences;
 	}
 	
@@ -95,11 +91,7 @@ public class SummarizingTool {
 					maxPos = k;
 				}
 			}
-<<<<<<< HEAD
 			mySummary += s[maxPos];
-=======
-			mySummary += s[maxPos] + ". ";
->>>>>>> origin/master
 		}
 		
 		return mySummary;
@@ -107,9 +99,9 @@ public class SummarizingTool {
 	
 	public static void main(String[] args) {
 		
-		RSSFeed.getURL();
-		RSSFeed.extractArticle();
-		RSSFeed.writeArticle();
+		//RSSFeed.getURL();
+		//RSSFeed.extractArticle();
+		//RSSFeed.writeArticle();
 
 		article = SummarizingTool.getArticle();
 	
